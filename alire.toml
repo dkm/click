@@ -1,0 +1,10 @@
+name = "click"
+description = "Click helps building Ada firmware for mechanical keyboards"
+version = "0.1.0-dev"
+
+authors = ["Marc Poulhiès"]
+maintainers = ["Marc Poulhiès <dkm@kataplop.net>"]
+maintainers-logins = ["dkm"]
+
+[[depends-on]]
+hal = "~0.3.0"
