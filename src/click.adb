@@ -111,4 +111,75 @@ package body Click is
 
       return Read_Status;
    end Get_Matrix;
+
+   --------------
+   --  Layout  --
+   --------------
+
+   function Kw (Code: Key_Code_T) return Action is
+   begin
+      return (T=>Key, C=>Code, L=>0);
+   end Kw;
+
+   function Lw (V: Natural) return Action is
+   begin
+      return (T=>Layer, C=>No, L=>V);
+   end Lw;
+
+   --  FIXME: hardcoded max number of events
+   type Array_Of_Reg_Events is array (Natural range 0 .. 100) of Event;
+   Registered_Events : Array_Of_Reg_Events;
+   Events_Mark : Natural := 0;
+
+   Current_Layer : Natural := 0;
+
+   procedure Register_Event (S: Layout; E: Event) is
+      A : Action renames S (Current_Layer, E.Row, E.Col);
+   begin
+      case A.T is
+         when Key =>
+            if E.Evt = Press then
+               Registered_Events (Events_Mark) := E;
+               Events_Mark := Events_Mark + 1;
+            end if;
+         when Layer =>
+            if E.Evt = Press then
+               Current_Layer := Current_Layer + A.L;
+            else
+               Current_Layer := Current_Layer - A.L;
+            end if;
+         when others =>
+            null;
+      end case;
+   end Register_Event;
+
+   procedure Register_Events (S: Layout; Es: Events) is
+   begin
+      for Evt of Es loop
+         Register_Event (S, Evt);
+      end loop;
+   end Register_Events;
+
+   procedure Tick (S: Layout) is
+   begin
+      --  We don't do anything yet.
+      null;
+   end Tick;
+
+   function Key_Codes (S: Layout) return Key_Codes_T is
+      Codes : Key_Codes_T(0 .. Events_Mark) := [];
+   begin
+      for Idx in 0 .. Events_Mark loop
+         declare
+            R: RowR := Registered_Events (Idx).Row;
+            C: ColR := Registered_Events (Idx).Col;
+         begin
+            Codes (Idx) := S (Current_Layer, R, C).C;
+         end;
+      end loop;
+
+      Events_Mark := 0;
+      return Codes;
+   end Key_Codes;
+
 end Click;
