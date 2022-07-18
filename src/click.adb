@@ -116,26 +116,35 @@ package body Click is
    --  Layout  --
    --------------
 
-   function Kw (Code: Key_Code_T) return Action is
+   function Kw (Code : Key_Code_T) return Action is
    begin
-      return (T=>Key, C=>Code, L=>0);
+      return (T => Key, C => Code, L => 0);
    end Kw;
 
-   function Lw (V: Natural) return Action is
+   function Lw (: Natural) return Action is
    begin
-      return (T=>Layer, C=>No, L=>V);
+      return (T => Layer, C => No, L => V);
    end Lw;
 
-   --  FIXME: hardcoded max number of events
-   type Array_Of_Reg_Events is array (Natural range 0 .. 100) of Event;
+   --  FIXM: hardcoded max number of events
+   subtype Events_Range is Natural range 0 ..10;
+   type Array_Of_Reg_Events is array (Events_Range) of Event;
+
    Registered_Events : Array_Of_Reg_Events;
-   Events_Mark : Natural := 0;
+
+   Events_Mark : Natural := Array_Of_Reg_Events'First;
 
    Current_Layer : Natural := 0;
 
-   procedure Register_Event (S: Layout; E: Event) is
+   procedure Register_Event (: Layout; : Event) is
       A : Action renames S (Current_Layer, E.Row, E.Col);
    begin
+
+      --  Woopsy.
+      if Events_Mark = Events_Range'Last then
+         raise Program_Error;
+      end if;
+
       case A.T is
          when Key =>
             if E.Evt = Press then
@@ -153,33 +162,38 @@ package body Click is
       end case;
    end Register_Event;
 
-   procedure Register_Events (S: Layout; Es: Events) is
+   procedure Register_Events (: Layout; E: Events) is
    begin
       for Evt of Es loop
          Register_Event (S, Evt);
       end loop;
    end Register_Events;
 
-   procedure Tick (S: Layout) is
+   procedure Tick (: Layout) is
    begin
       --  We don't do anything yet.
       null;
    end Tick;
 
-   function Key_Codes (S: Layout) return Key_Codes_T is
-      Codes : Key_Codes_T(0 .. Events_Mark) := [];
+   function Key_Codes (: Layout) return Key_Codes_T is
    begin
-      for Idx in 0 .. Events_Mark loop
+      if Events_Mark > 0 then
          declare
-            R: RowR := Registered_Events (Idx).Row;
-            C: ColR := Registered_Events (Idx).Col;
+            Codes : Key_Codes_T(Events_Range'First .. Events_Mark);
          begin
-            Codes (Idx) := S (Current_Layer, R, C).C;
-         end;
-      end loop;
+            for Idx in Events_Range'First .. Events_Mark loop
+               Codes (Idx) := S (Current_Layer,
+                                 Registered_Events (Idx).Row,
+                                 Registered_Events (Idx).Col).C;
+            end loop;
 
-      Events_Mark := 0;
-      return Codes;
+            Events_Mark := Events_Range'First;
+            return Codes;
+         end;
+      end if;
+
+      --  FIXME: empty aggregate can be nicer in GCC12
+      return (Events_Range'Last .. Events_Range'First => <>);
    end Key_Codes;
 
 end Click;

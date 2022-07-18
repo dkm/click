@@ -1,4 +1,4 @@
-with HAL.GPIO;
+ with HAL.GPIO;
 
 generic
    Nb_Bounce : Natural;
@@ -59,7 +59,7 @@ package Click is
 
    type Key_Code_T is
      (
-      -- / The "no" key, a placeholder to express nothing.
+      --   The "no" key, a placeholder to express nothing.
       No, --  = 0x00,
           --  / Error if too much keys are pressed at
           --  the same time.
@@ -95,55 +95,55 @@ package Click is
       X,
       Y,
       Z,
-      -- / `1` and `!`.
+      --   `1` and `!`.
       Kb1,
-      -- / `2` and `@`.
+      --   `2` and `@`.
       Kb2,
-      -- / `3` and `#`.
+      --   `3` and `#`.
       Kb3, --  0x20
            --  / `4` and `$`.
       Kb4,
-      -- / `5` and `%`.
+      --   `5` and `%`.
       Kb5,
-      -- / `6` and `^`.
+      --   `6` and `^`.
       Kb6,
-      -- / `7` and `&`.
+      --   `7` and `&`.
       Kb7,
-      -- / `8` and `*`.
+      --   `8` and `*`.
       Kb8,
-      -- / `9` and `(`.
+      --   `9` and `(`.
       Kb9,
-      -- / `0` and `)`.
+      --   `0` and `)`.
       Kb0,
       Enter,
       Escape,
       BSpace,
       Tab,
       Space,
-      -- / `-` and `_`.
+      --   `-` and `_`.
       Minus,
-      -- / `=` and `+`.
+      --   `=` and `+`.
       Equal,
-      -- / `[` and `{`.
+      --   `[` and `{`.
       LBracket,
-      -- / `]` and `}`.
+      --   `]` and `}`.
       RBracket, --  0x30
                 --  / `\` and `|`.
       Bslash,
-      -- / Non-US `#` and `~` (Typically near the Enter key).
+      --   Non-US `#` and `~` (Typically near the Enter key).
       NonUsHash,
-      -- / `;` and `:`.
+      --   `;` and `:`.
       SColon,
-      -- / `'` and `"`.
+      --   `'` and `"`.
       Quote,
       --  How to have ` as code?
-      -- / \` and `~`.
+      --   \` and `~`.
       Grave,
-      -- / `,` and `<`.
+      --   `,` and `<`.
       Comma,
-      -- / `.` and `>`.
+      --   `.` and `>`.
       Dot,
-      -- / `/` and `?`.
+      --   `/` and `?`.
       Slash,
       CapsLock,
       F1,
@@ -172,17 +172,17 @@ package Click is
       Down,
       Up,
       NumLock,
-      -- / Keypad `/`
+      --   Keypad `/`
       KpSlash,
-      -- / Keypad `*`
+      --   Keypad `*`
       KpAsterisk,
-      -- / Keypad `-`.
+      --   Keypad `-`.
       KpMinus,
-      -- / Keypad `+`.
+      --   Keypad `+`.
       KpPlus,
-      -- / Keypad enter.
+      --   Keypad enter.
       KpEnter,
-      -- / Keypad 1.
+      --   Keypad 1.
       Kp1,
       Kp2,
       Kp3,
@@ -194,12 +194,12 @@ package Click is
       Kp9,
       Kp0,
       KpDot,
-      -- / Non-US `\` and `|` (Typically near the Left-Shift key)
+      --   Non-US `\` and `|` (Typically near the Left-Shift key)
       NonUsBslash,
       Application, --  0x65
                    --  / not a key, used for errors
       Power,
-      -- / Keypad `=`.
+      --   Keypad `=`.
       KpEqual,
       F13,
       F14,
@@ -227,16 +227,16 @@ package Click is
       Mute,
       VolUp, --  0x80
       VolDown,
-      -- / Deprecated.
+      --   Deprecated.
       LockingCapsLock,
-      -- / Deprecated.
+      --   Deprecated.
       LockingNumLock,
-      -- / Deprecated.
+      --   Deprecated.
       LockingScrollLock,
       --  / Keypad `,`, also used for the
       --  brazilian keypad period (.) key.
       KpComma,
-      -- / Used on AS/400 keyboard
+      --   Used on AS/400 keyboard
       KpEqualSign,
       Intl1,
       Intl2,
@@ -273,25 +273,25 @@ package Click is
       --  usable on modern keyboards
 
       --  Modifiers
-      -- / Left Control.
+      --   Left Control.
       LCtrl, --  = 0xE0,
              --  / Left Shift.
       LShift,
-      -- / Left Alt.
+      --   Left Alt.
       LAlt,
-      -- / Left GUI (the Windows key).
+      --   Left GUI (the Windows key).
       LGui,
-      -- / Right Control.
+      --   Right Control.
       RCtrl,
-      -- / Right Shift.
+      --   Right Shift.
       RShift,
-      -- / Right Alt (or Alt Gr). 
+      --   Right Alt (or Alt Gr). 
       RAlt,
-      -- / Right GUI (the Windows key).
+      --   Right GUI (the Windows key).
       RGui, --  0xE7
 
       --  Unofficial
-      MediaPlayPause, -- = 0xE8,
+      MediaPlayPause, --   0xE8,
       MediaStopCD,
       MediaPreviousSong,
       MediaNextSong,
@@ -317,22 +317,22 @@ package Click is
 
    --   Should be a discriminated type
    type Action is record
-      T: Action_Type; -- should be the discriminant
+      T : Action_Type; --  hould be the discriminant
       C : Key_Code_T;
       L : Natural;
    end record;
 
-   function Kw (Code: Key_Code_T) return Action;
-   function Lw (V: Natural) return Action;
+   function Kw (Code : Key_Code_T) return Action;
+   function Lw (V : Natural) return Action;
 
    type Key_Codes_T is array (Natural range <>) of Key_Code_T;
 
    subtype Ac is Action;
-   type Layout is array (0.. Num_Layers - 1, RowR, ColR) of Action;
-   procedure Register_Event (S: Layout; E: Event);
-   procedure Register_Events (S: Layout; Es: Events);
-   procedure Tick (S: Layout);
+   type Layout is array (0 .. Num_Layers - 1, RowR, ColR) of Action;
+   procedure Register_Event (S : Layout; E : Event);
+   procedure Register_Events (S : Layout; Es : Events);
+   procedure Tick (S : Layout);
 
-   function Key_Codes (S: Layout) return Key_Codes_T;
+   function Key_Codes (S : Layout) return Key_Codes_T;
 
 end Click;
