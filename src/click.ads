@@ -1,4 +1,4 @@
- with HAL.GPIO;
+with HAL.GPIO;
 
 generic
    Nb_Bounce : Natural;
@@ -101,7 +101,7 @@ package Click is
       Kb2,
       --   `3` and `#`.
       Kb3, --  0x20
-           --  / `4` and `$`.
+      --  / `4` and `$`.
       Kb4,
       --   `5` and `%`.
       Kb5,
@@ -128,7 +128,7 @@ package Click is
       LBracket,
       --   `]` and `}`.
       RBracket, --  0x30
-                --  / `\` and `|`.
+      --  / `\` and `|`.
       Bslash,
       --   Non-US `#` and `~` (Typically near the Enter key).
       NonUsHash,
@@ -197,7 +197,7 @@ package Click is
       --   Non-US `\` and `|` (Typically near the Left-Shift key)
       NonUsBslash,
       Application, --  0x65
-                   --  / not a key, used for errors
+      --  / not a key, used for errors
       Power,
       --   Keypad `=`.
       KpEqual,
@@ -275,7 +275,7 @@ package Click is
       --  Modifiers
       --   Left Control.
       LCtrl, --  = 0xE0,
-             --  / Left Shift.
+      --  / Left Shift.
       LShift,
       --   Left Alt.
       LAlt,

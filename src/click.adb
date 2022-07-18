@@ -121,13 +121,13 @@ package body Click is
       return (T => Key, C => Code, L => 0);
    end Kw;
 
-   function Lw (: Natural) return Action is
+   function Lw (V : Natural) return Action is
    begin
       return (T => Layer, C => No, L => V);
    end Lw;
 
    --  FIXM: hardcoded max number of events
-   subtype Events_Range is Natural range 0 ..10;
+   subtype Events_Range is Natural range 0 .. 10;
    type Array_Of_Reg_Events is array (Events_Range) of Event;
 
    Registered_Events : Array_Of_Reg_Events;
@@ -136,7 +136,7 @@ package body Click is
 
    Current_Layer : Natural := 0;
 
-   procedure Register_Event (: Layout; : Event) is
+   procedure Register_Event (S : Layout; E : Event) is
       A : Action renames S (Current_Layer, E.Row, E.Col);
    begin
 
@@ -162,24 +162,24 @@ package body Click is
       end case;
    end Register_Event;
 
-   procedure Register_Events (: Layout; E: Events) is
+   procedure Register_Events (S : Layout; Es : Events) is
    begin
       for Evt of Es loop
          Register_Event (S, Evt);
       end loop;
    end Register_Events;
 
-   procedure Tick (: Layout) is
+   procedure Tick (S : Layout) is
    begin
       --  We don't do anything yet.
       null;
    end Tick;
 
-   function Key_Codes (: Layout) return Key_Codes_T is
+   function Key_Codes (S : Layout) return Key_Codes_T is
    begin
       if Events_Mark > 0 then
          declare
-            Codes : Key_Codes_T(Events_Range'First .. Events_Mark);
+            Codes : Key_Codes_T (Events_Range'First .. Events_Mark);
          begin
             for Idx in Events_Range'First .. Events_Mark loop
                Codes (Idx) := S (Current_Layer,
