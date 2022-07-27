@@ -15,7 +15,7 @@ project Click is
    for Library_Kind use Library_Type;
 
    package Compiler is
-      for Default_Switches ("Ada") use Click_Config.Ada_Compiler_Switches & ("-gnatX");
+      for Default_Switches ("Ada") use Click_Config.Ada_Compiler_Switches & ("-gnatX", "-gnat2022");
    end Compiler;
 
    package Binder is

@@ -1,12 +1,20 @@
+with Chests.Ring_Buffers;
+with USB.Device.HID.Keyboard;
+
 package body Click is
+   ----------------
+   --  DEBOUNCE  --
+   ----------------
+
+   --  Ideally, in a separate package.
 
    --  should be [], but not fixed yet in GCC 11.
-   Current_Status : KeyMatrix := [others => [others => False]];
-   New_Status : KeyMatrix := [others => [others => False]];
+   Current_Status : Key_Matrix := [others => [others => False]];
+   New_Status : Key_Matrix := [others => [others => False]];
    Since : Natural := 0;
    --   Nb_Bounce : Natural := 5;
 
-   function Update (NewS : KeyMatrix) return Boolean is
+   function Update (NewS : Key_Matrix) return Boolean is
    begin
       --  The new state is the same as the current stable state => Do nothing.
       if Current_Status = NewS then
@@ -27,7 +35,7 @@ package body Click is
 
       if Since > Nb_Bounce then
          declare
-            Tmp : constant KeyMatrix := Current_Status;
+            Tmp : constant Key_Matrix := Current_Status;
          begin
             --  New state has been stable enough.
             --  Latch it and notifies caller.
@@ -35,6 +43,7 @@ package body Click is
             New_Status := Tmp;
             Since := 0;
          end;
+
          return True;
       else
          --  Not there yet
@@ -42,23 +51,29 @@ package body Click is
       end if;
    end Update;
 
-   function Get_Events (NewS : KeyMatrix) return Events is
-      NumEvt : Natural := 0;
+   procedure Get_Matrix;
+   --  Could use := []; but GNAT 12 has a bug (fixed in upcoming 13)
+   Read_Status : Key_Matrix := [others => [others => False]];
+
+   function Get_Events return Events is
+      Num_Evt : Natural := 0;
+      New_S : Key_Matrix renames Read_Status;
    begin
-      if Update (NewS) then
+      Get_Matrix;
+      if Update (New_S) then
          for I in Current_Status'Range (1) loop
             for J in Current_Status'Range (2) loop
                if (not New_Status (I, J) and then Current_Status (I, J))
                  or else (New_Status (I, J) and then not Current_Status (I, J))
                then
-                  NumEvt := NumEvt + 1;
+                  Num_Evt := Num_Evt + 1;
                end if;
             end loop;
          end loop;
 
          declare
-            Evts : Events (Natural range 1 .. NumEvt);
-            Cursor : Natural range 1 .. NumEvt + 1 := 1;
+            Evts : Events (Natural range 1 .. Num_Evt);
+            Cursor : Natural range 1 .. Num_Evt + 1 := 1;
          begin
             for I in Current_Status'Range (1) loop
                for J in Current_Status'Range (2) loop
@@ -92,29 +107,41 @@ package body Click is
       return [];
    end Get_Events;
 
-   function Get_Matrix return KeyMatrix is
-      Read_Status : KeyMatrix := [others => [others => False]];
+   procedure Get_Matrix  is -- return Key_Matrix is
    begin
-      --  Ada 2022 allows for := [], but not there yet in GCC11
-      --  Read_Status := [others => [others => False]];
-
       for Row in Keys.Rows'Range loop
          Keys.Rows (Row).Clear;
 
          for Col in Keys.Cols'Range loop
-            if not Keys.Cols (Col).Set then
-               Read_Status (Col, Row) := True;
-            end if;
+            Read_Status (Col, Row) := not Keys.Cols (Col).Set;
          end loop;
          Keys.Rows (Row).Set;
       end loop;
-
-      return Read_Status;
    end Get_Matrix;
+
+   --  End of DEBOUNCE
 
    --------------
    --  Layout  --
    --------------
+
+   package Events_Ring_Buffers is new Chests.Ring_Buffers
+     (Element_Type => Event,
+      Capacity     => 16);
+
+   Queued_Events : Events_Ring_Buffers.Ring_Buffer;
+
+   type Statet is (Normal_Key, Layer_Mod, None);
+   type State is record
+      Typ : Statet;
+      Code : Key_Code_T;
+      Layer_Value : Natural;
+      --  Col : ColR;
+      --  Row : RowR;
+   end record;
+
+   type State_Array is array (ColR, RowR) of State;
+   States : State_Array := [others => [others => (Typ => None, Code => No, Layer_Value => 0)]];
 
    function Kw (Code : Key_Code_T) return Action is
    begin
@@ -126,74 +153,157 @@ package body Click is
       return (T => Layer, C => No, L => V);
    end Lw;
 
-   --  FIXM: hardcoded max number of events
-   subtype Events_Range is Natural range 0 .. 10;
+   --  FIXME: hardcoded max number of events
+   subtype Events_Range is Natural range 0 .. 60;
    type Array_Of_Reg_Events is array (Events_Range) of Event;
 
-   Registered_Events : Array_Of_Reg_Events;
+   Stamp : Natural := 0;
 
-   Events_Mark : Natural := Array_Of_Reg_Events'First;
-
-   Current_Layer : Natural := 0;
-
-   procedure Register_Event (S : Layout; E : Event) is
-      A : Action renames S (Current_Layer, E.Row, E.Col);
+   procedure Register_Events (L : Layout; Es : Events) is
    begin
+      Stamp := Stamp + 1;
 
-      --  Woopsy.
-      if Events_Mark = Events_Range'Last then
-         raise Program_Error;
-      end if;
-
-      case A.T is
-         when Key =>
-            if E.Evt = Press then
-               Registered_Events (Events_Mark) := E;
-               Events_Mark := Events_Mark + 1;
+      Log ("Reg events: " & Stamp'Image);
+      Log (Es'Length'Image);
+      for E of Es loop
+         declare
+         begin
+            if Events_Ring_Buffers.Is_Full (Queued_Events) then
+               raise Program_Error;
             end if;
-         when Layer =>
-            if E.Evt = Press then
-               Current_Layer := Current_Layer + A.L;
-            else
-               Current_Layer := Current_Layer - A.L;
-            end if;
-         when others =>
-            null;
-      end case;
-   end Register_Event;
 
-   procedure Register_Events (S : Layout; Es : Events) is
-   begin
-      for Evt of Es loop
-         Register_Event (S, Evt);
+            Events_Ring_Buffers.Append (Queued_Events, E);
+         end;
+         --         Log ("Reg'ed events:" &  Events_Mark'Image);
+         Log ("Reg'ed events:" &  Events_Ring_Buffers.Length (Queued_Events)'Image);
       end loop;
    end Register_Events;
 
-   procedure Tick (S : Layout) is
+   procedure Release (Col: Colr; Row: Rowr) is
    begin
-      --  We don't do anything yet.
-      null;
+      if States (Col, Row).Typ = None then
+         raise Program_Error;
+      end if;
+      States (Col, Row) := (Typ => None, Code => No, Layer_Value => 0);
+   end Release;
+
+   function Get_Current_Layer return Natural is
+      L : Natural := 0;
+   begin
+      for S of States loop
+         if S.Typ = Layer_Mod then
+            L := L + S.Layer_Value;
+         end if;
+      end loop;
+
+      return L;
+   end Get_Current_Layer;
+
+   --  Tick the event.
+   --  Returns TRUE if it needs to stay in the queued events
+   --  FALSE if the event has been consumed.
+
+   function Tick (L: Layout; E : in out Event) return Boolean is
+      Current_Layer : Natural := Get_Current_Layer;
+      A : Action renames L (Current_Layer, E.Row, E.Col);
+   begin
+      case E.Evt is
+         when Press =>
+            case A.T is
+               when Key =>
+                  States (E.Col, E.Row) :=
+                    (Typ => Normal_Key,
+                     Code => A.C,
+                     Layer_Value => 0);
+               when Layer =>
+                  States (E.Col, E.Row) := (Typ => Layer_Mod, Layer_Value => A.L, Code => No);
+               when others =>
+                  raise Program_Error;
+            end case;
+
+         when Release =>
+            Release (E.Col, E.Row);
+      end case;
+      return False;
    end Tick;
 
-   function Key_Codes (S : Layout) return Key_Codes_T is
-   begin
-      if Events_Mark > 0 then
-         declare
-            Codes : Key_Codes_T (Events_Range'First .. Events_Mark);
-         begin
-            for Idx in Events_Range'First .. Events_Mark loop
-               Codes (Idx) := S (Current_Layer,
-                                 Registered_Events (Idx).Row,
-                                 Registered_Events (Idx).Col).C;
-            end loop;
+   Last_Was_Empty_Log : Boolean := False;
 
-            Events_Mark := Events_Range'First;
-            return Codes;
+   procedure Tick (L : Layout) is
+   begin
+      for I in 1 .. Events_Ring_Buffers.Length(Queued_Events) loop
+         declare
+            E : Event := Events_Ring_Buffers.Last_Element (Queued_Events);
+         begin
+            Events_Ring_Buffers.Delete_Last (Queued_Events);
+            if Tick (L, E) then
+               Events_Ring_Buffers.Prepend (Queued_Events, E);
+            end if;
          end;
+      end loop;
+      if not Last_Was_Empty_Log or else Events_Ring_Buffers.Length(Queued_Events) /= 0 then
+         Log ("End Tick layout, events: " & Events_Ring_Buffers.Length(Queued_Events)'Image);
+         Last_Was_Empty_Log := Events_Ring_Buffers.Length(Queued_Events) = 0;
       end if;
 
-      --  FIXME: empty aggregate can be nicer in GCC12
-      return (Events_Range'Last .. Events_Range'First => <>);
-   end Key_Codes;
+   end Tick;
+
+   function Get_Key_Codes return Key_Codes_T is
+      Codes : Key_Codes_T (0 .. 10);
+      Wm: Natural := 0;
+   begin
+      for S of States loop
+         if S.Typ = Normal_Key and then
+            (S.Code < LCtrl or else S.Code > RGui)
+         then
+            Codes (Wm) := S.Code;
+            Wm := Wm + 1;
+         end if;
+      end loop;
+
+      if Wm = 0 then
+         return [];
+      else
+         return Codes (0 .. Wm - 1);
+      end if;
+   end Get_Key_Codes;
+
+   function Get_Modifiers return Key_Modifiers is
+      use USB.Device.HID.Keyboard;
+      KM : Key_Modifiers (1..8);
+      I : Natural := 0;
+   begin
+      for S of States loop
+         if S.Typ = Normal_Key then
+            I := I + 1;
+            case S.Code is
+              when LCtrl =>
+                 KM(I) := Ctrl_Left;
+              when RCtrl =>
+                 KM(I) := Ctrl_Right;
+              when LShift =>
+                 KM(I) := Shift_Left;
+              when RShift =>
+                 KM(I) := Shift_Right;
+              when LAlt =>
+                 KM(I) := Alt_Left;
+              when RAlt =>
+                 KM(I) := Alt_Right;
+              when LGui =>
+                 KM(I) := Meta_Left;
+              when RGui =>
+                 KM(I) := Meta_Right;
+              when others =>
+                 I := I - 1;
+            end case;
+         end if;
+      end loop;
+      return KM (1..I);
+   end Get_Modifiers;
+
+   procedure Init is
+   begin
+      Events_Ring_Buffers.Clear (Queued_Events);
+   end Init;
 
 end Click;

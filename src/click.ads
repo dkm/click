@@ -1,4 +1,5 @@
 with HAL.GPIO;
+with USB.Device.HID.Keyboard;
 
 generic
    Nb_Bounce : Natural;
@@ -13,6 +14,8 @@ generic
    Cols : Cols_T;
    Rows : Rows_T;
    Num_Layers : Natural;
+
+   with procedure Log (S : String; L :  Integer := 1; Deindent : Integer := 0);
 package Click is
 
    type Keys_T is record
@@ -23,7 +26,7 @@ package Click is
    Keys : Keys_T :=
      (Rows => Rows, Cols => Cols);
 
-   type KeyMatrix is array (ColR, RowR) of Boolean;
+   type Key_Matrix is array (ColR, RowR) of Boolean;
 
    --------------------------
    --  Events & Debouncing --
@@ -40,12 +43,8 @@ package Click is
 
    type Events is array (Natural range <>) of Event;
 
-   function Get_Events (NewS : KeyMatrix) return Events;
-   function Update (NewS : KeyMatrix) return Boolean;
-
-   function Get_Matrix return KeyMatrix;
-
-   type Matrix is array (RowR, ColR) of EventT;
+   function Get_Events return Events;
+   function Update (NewS : Key_Matrix) return Boolean;
 
    -------------
    --  Layout --
@@ -325,14 +324,16 @@ package Click is
    function Kw (Code : Key_Code_T) return Action;
    function Lw (V : Natural) return Action;
 
+   type Key_Modifiers is array (Natural range <>) of USB.Device.HID.Keyboard.Modifiers;
+
    type Key_Codes_T is array (Natural range <>) of Key_Code_T;
 
    subtype Ac is Action;
    type Layout is array (0 .. Num_Layers - 1, RowR, ColR) of Action;
-   procedure Register_Event (S : Layout; E : Event);
-   procedure Register_Events (S : Layout; Es : Events);
-   procedure Tick (S : Layout);
+   procedure Register_Events (L : Layout; Es : Events);
+   procedure Tick (L : Layout);
 
-   function Key_Codes (S : Layout) return Key_Codes_T;
-
+   function Get_Key_Codes return Key_Codes_T;
+   function Get_Modifiers return Key_Modifiers;
+   procedure Init;
 end Click;

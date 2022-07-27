@@ -8,3 +8,7 @@ maintainers-logins = ["dkm"]
 
 [[depends-on]]
 hal = "~0.3.0"
+[[depends-on]]
+chests = "~0.1.1"
+[[depends-on]]
+usb_embedded = "~0.3.0"
