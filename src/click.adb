@@ -81,21 +81,21 @@ package body Click is
                     and then Current_Status (I, J)
                   then
                      --  Pressing I, J
-                     Evts (Cursor) := [
+                     Evts (Cursor) := (
                                        Evt => Press,
                                        Col => I,
                                        Row => J
-                                      ];
+                                      );
                      Cursor := Cursor + 1;
                   elsif New_Status (I, J)
                     and then not Current_Status (I, J)
                   then
                      --  Release I, J
-                     Evts (Cursor) := [
+                     Evts (Cursor) := (
                                        Evt => Release,
                                        Col => I,
                                        Row => J
-                                      ];
+                                      );
                      Cursor := Cursor + 1;
                   end if;
                end loop;
